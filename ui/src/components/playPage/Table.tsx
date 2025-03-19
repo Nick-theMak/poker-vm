@@ -210,6 +210,9 @@ const Table = () => {
     const [zoom, setZoom] = useState(calculateZoom());
     const [openSidebar, setOpenSidebar] = useState(false);
 
+    const [userSeat, setUserSeat] = useState<number | null>(null);  
+    const [userNFT, setUserNFT] = useState<string | null>(null);
+
     const [flipped1, setFlipped1] = useState(false);
     const [flipped2, setFlipped2] = useState(false);
     const [flipped3, setFlipped3] = useState(false);
@@ -228,6 +231,16 @@ const Table = () => {
     const [isSmallBlindVisible, setIsSmallBlindVisible] = useState(false);
     const [bigBlindPosition, setBigBlindPosition] = useState({ left: '0px', top: '0px' });
     const [isBigBlindVisible, setIsBigBlindVisible] = useState(false);
+
+
+    useEffect(() => {
+        const savedNFT = localStorage.getItem("selectedNFT");
+        if (savedNFT) {
+            setUserNFT(savedNFT);
+        } else {
+            setUserNFT("https://ipfs.io/ipfs/bafybeiafzj33jeqrkbjjqjwprsctvstryo7p4w5ut32gu7762574g73wfa"); // Default NFT
+        }
+    }, []);
 
     useEffect(() => {
         if (tableData?.data) {
@@ -400,11 +413,16 @@ const Table = () => {
         return <div className="h-screen flex items-center justify-center text-white">Waiting for table data...</div>;
     }
 
+    const handleJoinSeat = (seatIndex: number) => {
+        setUserSeat(seatIndex);
+    };
+
+
     return (
         <div className="h-screen flex flex-col">
             {/*//! HEADER */}
             <div className="flex-shrink-0">
-                <div className="w-[100vw] h-[65px] bottom-0 bg-[#404040] top-5 text-center flex items-center justify-between border-gray-400 px-4 z-0">
+                <div className="w-[100vw] h-[65px] bottom-0 bg-custom-mong top-5 text-center flex items-center justify-between border-gray-400 px-4 z-0">
                     <div className="flex items-center space-x-2">
                         {/* <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full border-r border-white">
                             <IoMenuSharp size={20} />
@@ -443,7 +461,7 @@ const Table = () => {
                                         <span className="opacity-75">Balance:</span>
                                         <span className="font-medium text-green-400">
                                             ${balance ? formatWeiToUSD(balance) : "0.00"}
-                                            <span className="text-[10px] ml-1 text-gray-400">USDC</span>
+                                            <span className="text-[10px] ml-1 text-gray-400">MONG</span>
                                         </span>
                                     </div>
                                 </>
@@ -461,7 +479,7 @@ const Table = () => {
                     </div>
                 </div>
 
-                <div className="bg-gray-900 text-white flex justify-between items-center p-2 h-[25px]">
+                <div className="bg-custom-table text-white flex justify-between items-center p-2 h-[25px]">
                     {/* Left Section */}
                     <div className="flex items-center">
                         <span className="px-2 rounded text-[12px]">${`${tableDataValues.tableDataSmallBlind}/$${tableDataValues.tableDataBigBlind}`}</span>
@@ -483,10 +501,10 @@ const Table = () => {
             </div>
 
             {/*//! BODY */}
-            <div className="flex w-full flex-grow overflow-hidden">
+            <div className="flex w-full flex-grow overflow-hidden bg-custom-mong">
                 {/*//! TABLE + FOOTER */}
                 <div
-                    className={`flex-grow flex flex-col justify-between transition-all duration-250 overflow-hidden`}
+                    className={`flex-grow flex flex-col justify-between transition-all duration-250 overflow-hidden bg-mong-custom`}
                     style={{
                         transition: "margin 0.3s ease"
                     }}
@@ -494,7 +512,7 @@ const Table = () => {
                     {/*//! TABLE */}
                     <div className="flex-grow flex flex-col align-center justify-center min-h-[calc(100vh-280px)] z-[100]">
                         <div className="zoom-container h-[450px] w-[900px] m-[auto]" style={{ zoom }}>
-                            <div className="flex-grow scrollbar-none bg-custom-table h-full flex flex-col justify-center items-center relative">
+                            <div className="flex-grow scrollbar-none bg-custom-mong h-full flex flex-col justify-center items-center relative">
                                 <div className="w-[900px] h-[450px] relative text-center block transform translate-y-[30px]">
                                     <div className="h-full flex align-center justify-center">
                                         <div className="z-20 relative flex flex-col w-[900px] h-[350px] left-1/2 top-5 transform -translate-x-1/2 text-center border-[2px] border-[#c9c9c985] rounded-full items-center justify-center shadow-[0_7px_13px_rgba(0,0,0,0.3)]">
@@ -592,6 +610,7 @@ const Table = () => {
                                                     top={position.top}
                                                     color={position.color}
                                                     status={tableDataValues.tableDataPlayers?.[positionIndex]?.status}
+                                                    avatar={isCurrentUser && userNFT ? userNFT : undefined} // ✅ Pass NFT only if it's the current user
                                                 />
                                             ) : (
                                                 // This is another player's position - use OppositePlayer component
@@ -671,13 +690,13 @@ const Table = () => {
                         </div>
                     </div>
                     {/*//! FOOTER */}
-                    <div className="flex-shrink-0 w-full h-[190px] bg-custom-footer text-center z-[0] flex justify-center">
+                    <div className="flex-shrink-0 w-full h-[190px] bg-custom-mong text-center z-[0] flex justify-center">
                         <PokerActionPanel />
                     </div>
                 </div>
                 {/*//! SIDEBAR */}
                 <div
-                    className={`fixed top-[0px] right-0 h-full bg-custom-header overflow-hidden transition-all duration-300 ease-in-out relative ${
+                    className={`fixed top-[0px] right-0 h-full bg-custom-mong overflow-hidden transition-all duration-300 ease-in-out relative ${
                         openSidebar ? "w-[300px]" : "w-0"
                     }`}
                     style={{

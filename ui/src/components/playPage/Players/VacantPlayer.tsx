@@ -18,6 +18,8 @@ type VacantPlayerProps = {
     index: number;
 };
 
+const isDemoMode = true;
+
 const VacantPlayer: React.FC<VacantPlayerProps> = memo(({ left, top, index }) => {
     const { tableData, setTableData, nonce, refreshNonce, userPublicKey } = useTableContext();
     const [localTableData, setLocalTableData] = useState(tableData);
@@ -225,21 +227,24 @@ const VacantPlayer: React.FC<VacantPlayerProps> = memo(({ left, top, index }) =>
             setBuyInError("Please enter a valid buy-in amount");
             return;
         }
-        
+    
+        if (!isDemoMode) { // ✅ Only check funds if not in demo mode
+            if (balance && BigInt(ethers.parseUnits(buyInAmount, 18)) > BigInt(balance)) {
+                setBuyInError(`Amount exceeds your balance of ${ethers.formatUnits(balance, 18)} USDC`);
+                return;
+            }
+        }
+    
         try {
-            // Convert ETH to Wei
-            const buyInWei = ethers.parseUnits(buyInAmount, 18).toString();
-            console.log("Buy-in amount in Wei:", buyInWei);
-            
-            // Close the modal
+            console.log("Joining table in demo mode...");
             setShowBuyInModal(false);
             setBuyInError("");
-            
-            // Call the join table function with the specified amount
-            await handleJoinTable(buyInWei);
+    
+            // Call join function immediately
+            await handleJoinTable(ethers.parseUnits(buyInAmount, 18).toString());
         } catch (error) {
-            console.error("Error converting buy-in amount:", error);
-            setBuyInError("Invalid buy-in amount");
+            console.error("Error processing buy-in:", error);
+            setBuyInError("Failed to process buy-in. Please try again.");
         }
     };
 
@@ -248,82 +253,65 @@ const VacantPlayer: React.FC<VacantPlayerProps> = memo(({ left, top, index }) =>
             console.error("Missing user address or private key");
             return;
         }
-
+    
+        if (isDemoMode) {
+            console.log("Demo mode enabled: skipping server request.");
+            // ✅ Directly update table data (fake the join action)
+            setTableData((prevData: any) => ({
+                ...prevData,
+                data: {
+                    ...prevData.data,
+                    players: [
+                        ...prevData.data.players,
+                        {
+                            seat: nextAvailableSeat,
+                            address: userAddress,
+                            stack: buyInWei, // Fake stack amount
+                            status: "active",
+                        }
+                    ]
+                }
+            }));
+            return;
+        }
+    
         try {
             await refreshNonce(userAddress);
             const currentNonce = nonce?.toString() || "0";
-
-            console.log("User balance:", balance);
-            
-            // Get minimum buy-in from table data with proper fallback
-            const bigBlindValue = localTableData?.data?.bigBlind || "200000000000000000"; // 0.2 USDC default
-            const twentyBigBlinds = (BigInt(bigBlindValue) * BigInt(20)).toString();
-            const minBuyIn = localTableData?.data?.minBuyIn || twentyBigBlinds; // Default to 20x big blind
-            
-            console.log("=== MIN BUY IN ===");
-            console.log("minBuyIn:", minBuyIn);
-            console.log("bigBlindValue:", bigBlindValue);
-            console.log("twentyBigBlinds:", twentyBigBlinds);
-            
-            // Use the user's input amount directly
-            let buyInAmount = buyInWei;
-            
-            // Check if user's input exceeds their balance
-            if (balance && BigInt(buyInWei) > BigInt(balance)) {
-                console.log(`User input (${buyInWei}) exceeds balance (${balance})`);
-                setShowBuyInModal(true);
-                setBuyInError(`Amount exceeds your balance of ${ethers.formatUnits(balance, 18)} USDC`);
-                return;
-            }
-            
-            console.log("Final buy-in amount:", buyInAmount);
-
+    
             const signature = await getSignature(
                 privateKey,
                 currentNonce,
                 userAddress,
                 tableId,
-                buyInAmount,
+                buyInWei,
                 "join"
             );
-
+    
             const requestData = {
                 id: "1",
                 method: "transfer",
                 userAddress,
                 tableId,
-                buyInAmount,
+                buyInAmount: buyInWei,
                 signature,
                 publicKey: userPublicKey
             };
-
+    
             console.log("Sending join request:", requestData);
             const response = await axios.post(`${PROXY_URL}/table/${tableId}/join`, requestData);
             console.log("Join response:", response.data);
-
+    
             if (response.data?.result?.data) {
                 setTableData(response.data.result.data);
-                
-                // Wait for backend to process the join, then fetch fresh data
-                setTimeout(async () => {
-                    try {
-                        console.log("Fetching fresh table data after join...");
-                        const freshDataResponse = await axios.get(`${PROXY_URL}/table/${tableId}`);
-                        console.log("Fresh table data received:", freshDataResponse.data);
-                        setTableData({ data: freshDataResponse.data });
-                    } catch (refreshError) {
-                        console.error("Error refreshing table data:", refreshError);
-                    }
-                }, 1500); // Wait 1.5 seconds before refreshing
             }
         } catch (error) {
             console.error("Error joining table:", error);
-            // Show error to user
             setShowBuyInModal(true);
             setBuyInError("Failed to join table. Please try again.");
         }
     };
-
+    
     // Only log position once during mount
     useEffect(() => {
         console.log("VacantPlayer mounted at position:", { left, top, index });

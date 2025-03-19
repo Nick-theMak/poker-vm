@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+    font-family: 'Poppin';
+    src: url('./assets/fonts/Poppin-regular.otf') format('opentype');
+}
+
+body {
+    font-family: 'Poppin', sans-serif;
+}
+
+@keyframes scrollText {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+.animate-scroll {
+    display: flex;
+    animation: scrollText 20s linear infinite;
+}

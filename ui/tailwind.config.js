@@ -15,7 +15,8 @@ module.exports = {
             },
             backgroundColor: {
                 "custom-footer": "#232837",
-                "custom-header": "#4d515c"
+                "custom-header": "#4d515c",
+                "custom-mong": "#832EFF"
             },
             boxShadow: {
                 "custom-shadow": "0 1px 1px rgba(0, 0, 0, 0.25)"
